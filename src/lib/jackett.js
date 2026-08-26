@@ -70,20 +70,36 @@ export async function searchSeasonTorrents({indexer, name, year, season}){
 export async function searchEpisodeTorrents({indexer, name, year, season, episode}){
 
   indexer = indexer || 'all';
-  const cacheKey = `jackettItems:2:episode:${indexer}:${name}:${year}:${season}:${episode}`;
+  const cacheKey = `jackettItems:3:episode:${indexer}:${name}:${year}:${season}:${episode}`;
   let items = await cache.get(cacheKey);
 
   if(!items){
-    const res = await jackettApi(
-      `/api/v2.0/indexers/${indexer}/results/torznab/api`,
-      {t: 'search', cat: CATEGORY.SERIES, q: `${name} S${numberPad(season)}E${numberPad(episode)}`}
-    );
-    items = res?.rss?.channel?.item || [];
-    cache.set(cacheKey, items, {ttl: items.length > 0 ? 3600*36 : 60});
+    const queries = [
+      // Native tvsearch with season/ep params — lets Jackett handle filtering per indexer
+      {t: 'tvsearch', q: name, season: season, ep: episode},
+      // Fallback: Spanish naming format (1x05) for indexers with poor tvsearch support
+      {t: 'search', cat: CATEGORY.SERIES, q: `${name} ${season}x${numberPad(episode)}`}
+    ];
+
+    const results = await Promise.all(queries.map(query =>
+      jackettApi(`/api/v2.0/indexers/${indexer}/results/torznab/api`, query)
+        .then(res => res?.rss?.channel?.item || [])
+        .catch(() => [])
+    ));
+
+    // Merge and deduplicate by guid
+    const seen = new Set();
+    items = results.flat().filter(item => {
+      const guid = item?.guid;
+      if(!guid || seen.has(guid)) return false;
+      seen.add(guid);
+      return true;
+    });
+
+    cache.set(cacheKey, items, {ttl: items.length > 0 ? 3600 * 6 : 120});
   }
 
   return normalizeItems(items);
-
 }
 
 export async function getIndexers(){

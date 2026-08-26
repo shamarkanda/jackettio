@@ -150,10 +150,15 @@ async function getTorrents(userConfig, metaInfos, debridInstance){
     }else if(type == 'series'){
 
       const episodesPromises = indexers.map(indexer => timeoutIndexerSearch(indexer.id, jackett.searchEpisodeTorrents({...metaInfos, indexer: indexer.id}), indexerTimeoutSec*1000));
+      // searchSeasonTorrents is not used here — searching by full serie name and filtering locally
+      // is more robust: it catches complete packs, season ranges (S01-S05), and poorly tagged torrents
+      // that a strict season-based query on the indexer would miss.
       // const packsPromises = indexers.map(indexer => promiseTimeout(jackett.searchSeasonTorrents({...metaInfos, indexer: indexer.id}), indexerTimeoutSec*1000).catch(err => []));
       const packsPromises = indexers.map(indexer => timeoutIndexerSearch(indexer.id, jackett.searchSerieTorrents({...metaInfos, indexer: indexer.id}), indexerTimeoutSec*1000));
 
       const episodesTorrents = [].concat(...(await Promise.all(episodesPromises))).filter(filterSearch);
+      // Original filter only matched exact SXX format — replaced below with a more permissive
+      // filter that also catches "season X", ranges (S01 S05), and complete serie packs.
       // const packsTorrents = [].concat(...(await Promise.all(packsPromises))).filter(torrent => filterSearch(torrent) && parseWords(torrent.name.toUpperCase()).includes(`S${numberPad(season)}`));
       const packsTorrents = [].concat(...(await Promise.all(packsPromises))).filter(torrent => {
         if(!filterSearch(torrent))return false;
