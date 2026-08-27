@@ -10,6 +10,7 @@ export default class Tmdb {
     
     const searchId = await this.#request('GET', `/3/find/${id}`, {query: {external_source: 'imdb_id', language: language || 'en-US'}}, {key: `searchId:${id}:${language || '-'}`, ttl: 3600*3});
     const meta = searchId.movie_results[0];
+    if(!meta) throw new Error(`No TMDB movie results found for IMDB ID: ${id}`);
 
     const localizedName = language ? meta.title || meta.original_title : meta.original_title || meta.title;
     const originalName = meta.original_title || meta.title;
@@ -29,6 +30,7 @@ export default class Tmdb {
   async getEpisodeById(id, season, episode, language){
 
     const searchId = await this.#request('GET', `/3/find/${id}`, {query: {external_source: 'imdb_id'}}, {key: `searchId:${id}`, ttl: 3600*3});
+    if(!searchId.tv_results[0]) throw new Error(`No TMDB TV results found for IMDB ID: ${id}`);
     const meta = await this.#request('GET', `/3/tv/${searchId.tv_results[0].id}`, {query: {language: language || 'en-US'}}, {key: `${id}:${language}`, ttl: 3600*3});
 
     const episodes = [];
