@@ -7,6 +7,9 @@ export default class RealDebrid {
   static id = 'realdebrid';
   static name = 'Real-Debrid';
   static shortName = 'RD';
+  // Cache check disabled: GET /torrents/instantAvailability was removed by RD in Nov 2024.
+  // GET /torrents only checks the user's own account, not the global CDN.
+  // Use an external service (e.g. StremThru via Comet) for real cache checking.
   static cacheCheckAvailable = false;
   static configFields = [
     {
@@ -29,19 +32,6 @@ export default class RealDebrid {
 
   async getTorrentsCached(torrents, isValidCachedFiles){
     return [];
-    // const hashList = torrents.map(torrent => torrent.infos.infoHash).filter(Boolean);
-    // const res = await this.#request('GET', `/torrents/instantAvailability/${hashList.join('/')}`);
-    // return torrents.filter(torrent => {
-    //   const cachedFiles = [];
-    //   const caches = (res[torrent.infos.infoHash]?.rd || []).filter(this.#isVideoCache);
-    //   for(const cache of caches){
-    //     for(const file of Object.values(cache)){
-    //       const f = {name: file.filename, size: file.filesize};
-    //       if(!cachedFiles.includes(f))cachedFiles.push(f);
-    //     }
-    //   }
-    //   return cachedFiles.length > 0 && isValidCachedFiles(cachedFiles);
-    // });
   }
 
   async getProgressTorrents(torrents){
@@ -85,13 +75,6 @@ export default class RealDebrid {
 
     if(torrent.status == 'waiting_files_selection'){
 
-      // const caches = await this.#request('GET', `/torrents/instantAvailability/${torrent.hash}`);
-      // const bestCache = (caches[torrent.hash]?.rd || [])
-      //   .filter(cache => cache[fileId] && this.#isVideoCache(cache))
-      //   .sort((a, b) => Object.values(b).length - Object.values(a).length)
-      //   .shift();
-
-      // const fileIds = bestCache ? Object.keys(bestCache) : torrent.files.filter(file => isVideo(file.path)).map(file => file.id);
       const fileIds = torrent.files.filter(file => isVideo(file.path)).map(file => file.id);
       body = new FormData();
       body.append('files', fileIds.join(','));
