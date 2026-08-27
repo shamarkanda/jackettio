@@ -129,7 +129,7 @@ app.get("/:userConfig?/manifest.json", async(req, res) => {
   if(req.params.userConfig){
     const userConfig = JSON.parse(atob(req.params.userConfig));
     const debridInstance = debrid.instance(userConfig);
-    manifest.name += ` ${debridInstance.shortName}`;
+    if(debridInstance) manifest.name += ` ${debridInstance.shortName}`;
   }
   respond(res, manifest);
 });

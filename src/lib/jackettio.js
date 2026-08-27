@@ -393,8 +393,8 @@ export async function getStreams(userConfig, type, stremioId, publicUrl){
 
   const torrents = await getTorrents(userConfig, metaInfos, debridInstance);
 
-  // Prepare next expisode torrents list
-  if(type == 'series'){
+  // Prepare next episode torrents list (only when debrid is configured)
+  if(type == 'series' && debridInstance){
     prepareNextEpisode({...userConfig, forceCacheNextEpisode: false}, metaInfos, debridInstance);
   }
 
@@ -405,9 +405,21 @@ export async function getStreams(userConfig, type, stremioId, publicUrl){
     if(type == 'series' && file.name)rows.push(file.name);
     if(torrent.infoText)rows.push(`ℹ️ ${torrent.infoText}`);
     rows.push([`💾${bytesToSize(file.size || torrent.size)}`, `👥${torrent.seeders}`, `⚙️${torrent.indexerId}`, ...(torrent.languages || []).map(language => language.emoji)].join(' '));
-    if(torrent.progress && !torrent.isCached){
+    if(debridInstance && torrent.progress && !torrent.isCached){
       rows.push(`⬇️ ${torrent.progress.percent}% ${bytesToSize(torrent.progress.speed)}/s`);
     }
+
+    // No debrid: return infoHash for direct torrent streaming or external debrid resolution
+    if(!debridInstance){
+      const stream = {
+        name: `${config.addonName} ${quality}`,
+        title: rows.join("\n"),
+        infoHash: torrent.infos.infoHash,
+      };
+      if(file.index !== undefined) stream.fileIdx = file.index;
+      return stream;
+    }
+
     return {
       name: `[${debridInstance.shortName}${torrent.isCached ? '+' : ''}] ${userConfig.enableMediaFlow ? '🕵🏼‍♂️ ' : ''}${config.addonName} ${quality}`,
       title: rows.join("\n"),
@@ -421,6 +433,7 @@ export async function getDownload(userConfig, type, stremioId, torrentId){
 
   userConfig = await mergeDefaultUserConfig(userConfig);
   const debridInstance = debrid.instance(userConfig);
+  if(!debridInstance) throw new Error("Debrid service is not configured");
   const infos = await torrentInfos.getById(torrentId);
   const {id, season, episode} = parseStremioId(stremioId);
   const cacheKey = `download:2:${await debridInstance.getUserHash()}${userConfig.enableMediaFlow ? ':mfp': ''}:${stremioId}:${torrentId}`;

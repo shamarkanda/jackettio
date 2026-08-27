@@ -177,7 +177,7 @@
         </div>
 
         <div class="my-3 d-flex align-items-center">
-          <button @click="configure" type="button" class="btn btn-primary" :disabled="!debrid.id">{{isUpdate ? 'Update' : 'Install'}}</button>
+          <button @click="configure" type="button" class="btn btn-primary">{{isUpdate ? 'Update' : 'Install'}}</button>
           <div v-if="error" class="text-danger ms-2">{{error}}</div>
           <div class="ms-auto">
             <a v-if="manifestUrl" :href="manifestUrl">Stremio Link</a>
@@ -211,7 +211,7 @@
               const savedUserConfig = JSON.parse(atob(config.userConfig));
               Object.assign(defaultUserConfig, savedUserConfig);
               debrid.value = debrids.find(debrid => debrid.id == savedUserConfig.debridId) || {};
-              debrid.value.configFields.forEach(field => field.value = savedUserConfig[field.name] || null);
+              (debrid.value.configFields || []).forEach(field => field.value = savedUserConfig[field.name] || null);
               isUpdate = true;
             }catch(err){}
           }
@@ -244,14 +244,11 @@
               userConfig.qualities = qualities.filter(quality => quality.checked).map(quality => quality.value);
               userConfig.indexers = indexers.filter(indexer => indexer.checked).map(indexer => indexer.value);
               userConfig.excludeKeywords = form.value.excludeKeywords.split(',').filter(Boolean);
-              debrid.value.configFields.forEach(field => {
+              (debrid.value.configFields || []).forEach(field => {
                 if(field.required && !field.value)throw new Error(`${field.label} is required`);
                 userConfig[field.name] = field.value
               });
 
-              if(!userConfig.debridId){
-                throw new Error(`Debrid is required`);
-              }
 
               if(!userConfig.qualities.length){
                 throw new Error(`Quality is required`);

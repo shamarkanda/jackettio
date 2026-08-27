@@ -8,12 +8,17 @@ const debrid = {debridlink, alldebrid, realdebrid, premiumize};
 
 export function instance(userConfig){
 
+  // Allow running without debrid (pure indexer mode)
+  if(!userConfig.debridId) return null;
+
   if(!debrid[userConfig.debridId]){
-    throw new Error(`Debrid service "${userConfig.debridId} not exists`);
+    throw new Error(`Debrid service "${userConfig.debridId}" not exists`);
   }
   
   return new debrid[userConfig.debridId](userConfig);
 }
+
+export const cacheCheckAvailable = Object.values(debrid).some(d => d.cacheCheckAvailable);
 
 export async function list(){
   const values = [];
