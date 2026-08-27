@@ -144,7 +144,9 @@ async function getTorrents(userConfig, metaInfos, debridInstance){
       const yearTorrents = torrents.filter(filterYear);
       if(yearTorrents.length)torrents = yearTorrents;
       torrents = torrents.filter(filterSearch).sort(sortBy(...sortSearch));
-      torrents = priotizeItems(torrents, filterLanguage, Math.max(1, Math.round(maxTorrents * 0.33)));
+      // Absolute language priority: ALL matching torrents go first, then the rest.
+      // Within each group, the existing sort order is preserved.
+      torrents = priotizeItems(torrents, filterLanguage);
       torrents = torrents.slice(0, maxTorrents + 2);
 
     }else if(type == 'series'){
@@ -191,7 +193,9 @@ async function getTorrents(userConfig, metaInfos, debridInstance){
       const yearTorrents = torrents.filter(filterYear);
       if(yearTorrents.length)torrents = yearTorrents;
       torrents = torrents.filter(filterSearch).sort(sortBy(...sortSearch));
-      torrents = priotizeItems(torrents, filterLanguage, Math.max(1, Math.round(maxTorrents * 0.33)));
+      // Absolute language priority: ALL matching torrents go first, then the rest.
+      // Within each group, the existing sort order is preserved.
+      torrents = priotizeItems(torrents, filterLanguage);
       torrents = torrents.slice(0, maxTorrents + 2);
 
       if(priotizePackTorrents > 0 && packsTorrents.length && !torrents.find(t => packsTorrents.includes(t))){
