@@ -104,7 +104,7 @@ export default {
     {value: 'turkish',    emoji: '🇹🇷', iso639: 'tr', pattern: 'turkish'}
   ].map(lang => {
     lang.label = `${lang.emoji} ${lang.value.charAt(0).toUpperCase() + lang.value.slice(1)}`;
-    lang.pattern = new RegExp(` ${lang.pattern} `, 'i');
+    lang.pattern = new RegExp(`(^| )${lang.pattern}( |$)`, 'i');
     return lang;
   })
 }
