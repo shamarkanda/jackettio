@@ -9,19 +9,33 @@ export const CATEGORY = {
   SERIES: 5000
 };
 
-export async function searchMovieTorrents({indexer, name, year}){
+export async function searchMovieTorrents({indexer, name, originalName, year}){
 
   indexer = indexer || 'all';
-  const cacheKey = `jackettItems:2:movie:${indexer}:${name}:${year}`;
+  const cacheKey = `jackettItems:3:movie:${indexer}:${name}:${originalName || ''}:${year}`;
   let items = await cache.get(cacheKey);
 
   if(!items){
-    const res = await jackettApi(
-      `/api/v2.0/indexers/${indexer}/results/torznab/api`,
-      // year is buggy with some indexers
-      {t: 'search', cat: CATEGORY.MOVIE, q: name /*, year: year*/}
-    );
-    items = res?.rss?.channel?.item || [];
+    // Search with localized and original name in parallel to cover both Spanish and international indexers
+    const queries = [{t: 'movie', q: name}];
+    if(originalName && originalName !== name){
+      queries.push({t: 'movie', q: originalName});
+    }
+
+    const results = await Promise.all(queries.map(query =>
+      jackettApi(`/api/v2.0/indexers/${indexer}/results/torznab/api`, query)
+        .then(res => res?.rss?.channel?.item || [])
+        .catch(() => [])
+    ));
+
+    const seen = new Set();
+    items = results.flat().filter(item => {
+      const guid = item?.guid;
+      if(!guid || seen.has(guid)) return false;
+      seen.add(guid);
+      return true;
+    });
+
     cache.set(cacheKey, items, {ttl: items.length > 0 ? 3600*36 : 60});
   }
 
@@ -29,18 +43,32 @@ export async function searchMovieTorrents({indexer, name, year}){
 
 }
 
-export async function searchSerieTorrents({indexer, name, year}){
+export async function searchSerieTorrents({indexer, name, originalName, year}){
 
   indexer = indexer || 'all';
-  const cacheKey = `jackettItems:2:serie:${indexer}:${name}:${year}`;
+  const cacheKey = `jackettItems:3:serie:${indexer}:${name}:${originalName || ''}:${year}`;
   let items = await cache.get(cacheKey);
 
   if(!items){
-    const res = await jackettApi(
-      `/api/v2.0/indexers/${indexer}/results/torznab/api`,
-      {t: 'search', cat: CATEGORY.SERIES, q: `${name}`}
-    );
-    items = res?.rss?.channel?.item || [];
+    const queries = [{t: 'search', cat: CATEGORY.SERIES, q: name}];
+    if(originalName && originalName !== name){
+      queries.push({t: 'search', cat: CATEGORY.SERIES, q: originalName});
+    }
+
+    const results = await Promise.all(queries.map(query =>
+      jackettApi(`/api/v2.0/indexers/${indexer}/results/torznab/api`, query)
+        .then(res => res?.rss?.channel?.item || [])
+        .catch(() => [])
+    ));
+
+    const seen = new Set();
+    items = results.flat().filter(item => {
+      const guid = item?.guid;
+      if(!guid || seen.has(guid)) return false;
+      seen.add(guid);
+      return true;
+    });
+
     cache.set(cacheKey, items, {ttl: items.length > 0 ? 3600*36 : 60});
   }
 
@@ -67,7 +95,7 @@ export async function searchSeasonTorrents({indexer, name, year, season}){
 
 }
 
-export async function searchEpisodeTorrents({indexer, name, year, season, episode}){
+export async function searchEpisodeTorrents({indexer, name, originalName, year, season, episode}){
 
   indexer = indexer || 'all';
   const cacheKey = `jackettItems:3:episode:${indexer}:${name}:${year}:${season}:${episode}`;
@@ -78,7 +106,9 @@ export async function searchEpisodeTorrents({indexer, name, year, season, episod
       // Native tvsearch with season/ep params — lets Jackett handle filtering per indexer
       {t: 'tvsearch', q: name, season: season, ep: episode},
       // Fallback: Spanish naming format (1x05) for indexers with poor tvsearch support
-      {t: 'search', cat: CATEGORY.SERIES, q: `${name} ${season}x${numberPad(episode)}`}
+      {t: 'search', cat: CATEGORY.SERIES, q: `${name} ${season}x${numberPad(episode)}`},
+      // Fallback: original name tvsearch for international indexers
+      ...(originalName && originalName !== name ? [{t: 'tvsearch', q: originalName, season: season, ep: episode}] : [])
     ];
 
     const results = await Promise.all(queries.map(query =>

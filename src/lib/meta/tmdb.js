@@ -11,8 +11,12 @@ export default class Tmdb {
     const searchId = await this.#request('GET', `/3/find/${id}`, {query: {external_source: 'imdb_id', language: language || 'en-US'}}, {key: `searchId:${id}:${language || '-'}`, ttl: 3600*3});
     const meta = searchId.movie_results[0];
 
+    const localizedName = language ? meta.title || meta.original_title : meta.original_title || meta.title;
+    const originalName = meta.original_title || meta.title;
+
     return {
-      name: language ? meta.title || meta.original_title : meta.original_title || meta.title,
+      name: localizedName,
+      originalName: localizedName !== originalName ? originalName : undefined,
       year: parseInt(`${meta.release_date}`.split('-').shift()),
       imdb_id: id,
       type: 'movie',
@@ -38,8 +42,12 @@ export default class Tmdb {
       }
     });
 
+    const localizedName = language ? meta.name || meta.original_name : meta.original_name || meta.name;
+    const originalName = meta.original_name || meta.name;
+
     return {
-      name: language ? meta.name || meta.original_name : meta.original_name || meta.name,
+      name: localizedName,
+      originalName: localizedName !== originalName ? originalName : undefined,
       year: parseInt(`${meta.first_air_date}`.split('-').shift()),
       imdb_id: id,
       type: 'series',

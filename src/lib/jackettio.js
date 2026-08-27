@@ -204,17 +204,37 @@ async function getTorrents(userConfig, metaInfos, debridInstance){
     console.log(`${stremioId} : ${torrents.length} torrents filtered, get torrents infos ...`);
     startDate = new Date();
 
-    const limit = pLimit(5);
-    torrents = await Promise.all(torrents.map(torrent => limit(async () => {
+    // Download torrent infos: sequential per indexer, parallel across indexers.
+    // Some indexers (e.g. Wolfmax4K) share session/cookie state in Jackett across
+    // concurrent downloads (via enlacito.com), returning wrong torrents when run
+    // in parallel. Sequential per indexer avoids this; parallel across indexers
+    // keeps total time close to the slowest single indexer group.
+    const indexerGroups = {};
+    torrents.forEach(torrent => {
+      const key = torrent.indexerId || 'unknown';
+      if(!indexerGroups[key]) indexerGroups[key] = [];
+      indexerGroups[key].push(torrent);
+    });
+
+    const getTorrentInfoSafe = async (torrent) => {
       try {
-        torrent.infos = await promiseTimeout(torrentInfos.get(torrent), Math.min(30, indexerTimeoutSec)*1000);
+        torrent.infos = await promiseTimeout(torrentInfos.get(torrent), Math.min(60, indexerTimeoutSec)*1000);
         return torrent;
       }catch(err){
         console.log(`${stremioId} Failed getting torrent infos for ${torrent.id} from indexer ${torrent.indexerId}`);
         console.log(`${stremioId} ${torrent.link.replace(/apikey=[a-z0-9\-]+/, 'apikey=****')}`, err);
         return false;
       }
-    })));
+    };
+
+    const groupResults = await Promise.all(Object.values(indexerGroups).map(async group => {
+      const results = [];
+      for(const torrent of group){
+        results.push(await getTorrentInfoSafe(torrent));
+      }
+      return results;
+    }));
+    torrents = groupResults.flat();
     torrents = torrents.filter(torrent => torrent && torrent.infos)
       .filter((torrent, index, items) => items.findIndex(t => t.infos.infoHash == torrent.infos.infoHash) === index)
       .slice(0, maxTorrents);
