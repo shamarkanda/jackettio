@@ -3,5 +3,6 @@ export const ERROR = {
   NOT_PREMIUM: 'You must be premium on debrid',
   EXPIRED_API_KEY: 'Api key expired',
   ACCESS_DENIED: 'Access denied',
-  TWO_FACTOR_AUTH: 'Two-Factor authentication needed'
+  TWO_FACTOR_AUTH: 'Two-Factor authentication needed',
+  INFRINGING_FILE: 'File blocked by debrid (copyright filter)'
 };

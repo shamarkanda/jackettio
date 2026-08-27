@@ -214,6 +214,11 @@ app.use('/:userConfig/download/:type/:id/:torrentId/:name?', async(req, res, nex
         res.set('location', `/videos/access_denied.mp4`);
         res.send('');
         break;
+      case debrid.ERROR.INFRINGING_FILE:
+        res.status(302);
+        res.set("location", `/videos/error.mp4`);
+        res.send("");
+        break;
       case debrid.ERROR.TWO_FACTOR_AUTH:
         res.status(302);
         res.set('location', `/videos/two_factor_auth.mp4`);

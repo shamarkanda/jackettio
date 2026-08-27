@@ -177,6 +177,8 @@ export default class RealDebrid {
           throw new Error(ERROR.TWO_FACTOR_AUTH);
         case 20:
           throw new Error(ERROR.NOT_PREMIUM);
+        case 35:
+          throw new Error(ERROR.INFRINGING_FILE);
         default:
           throw new Error(`Invalid RD api result: ${JSON.stringify(data)}`);
       }
