@@ -175,9 +175,11 @@ function normalizeItems(items){
       obj[item.name] = item.value;
       return obj;
     }, {});
-    const quality = item.title.match(/(2160|1080|720|480|360)p/);
+    // Several releases (mostly Wolfmax4k) brand 4K/UHD without a literal "2160p" tag
+    // (e.g. "4KUHDrip", "4KUHDremux", "[4K]"), so match "4k" too and fall back to 2160.
+    const quality = item.title.match(/(2160|1080|720|480|360)p/i) || item.title.match(/4k/i);
     const title = parseWords(item.title).join(' ');
-    const year = item.title.replace(quality ? quality[1] : '', '').match(/(19|20[\d]{2})/);
+    const year = item.title.replace(quality ? quality[0] : '', '').match(/(19|20[\d]{2})/);
     return {
       name: item.title,
       guid: item.guid,
@@ -190,7 +192,7 @@ function normalizeItems(items){
       infoHash: attr.infohash || '',
       magneturl: attr.magneturl || '', 
       type: item.type,
-      quality: quality ? parseInt(quality[1]) : 0,
+      quality: quality ? (/^4k/i.test(quality[0]) ? 2160 : parseInt(quality[0])) : 0,
       year: year ? parseInt(year.pop()) : 0,
       languages: config.languages.filter(lang => title.match(lang.pattern))
     };
