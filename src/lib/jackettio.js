@@ -101,7 +101,11 @@ async function getTorrents(userConfig, metaInfos, debridInstance){
 
     console.log(`${stremioId} : Searching torrents ...`);
 
-    const sortSearch = [['seeders', true]];
+    // Some indexers never report real seeder counts (everything comes back as 1), which made
+    // a hardcoded seeders-sort here a no-op tie broken by indexer iteration order, silently
+    // dropping whole indexers out of the maxTorrents+2 pre-slice. Use the user's own
+    // sortUncached instead, since quality/size are already known at this point.
+    const sortSearch = sortUncached;
     const filterSearch = (torrent) => {
       if(!qualities.includes(torrent.quality))return false;
       const torrentWords = parseWords(torrent.name.toLowerCase());
