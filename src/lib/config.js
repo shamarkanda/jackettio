@@ -90,7 +90,10 @@ export default {
     {value: 'chinese',    emoji: '🇨🇳', iso639: 'zh', pattern: 'chinese'},
     {value: 'german',     emoji: '🇩🇪', iso639: 'de', pattern: 'german'},
     {value: 'english',    emoji: '🇺🇸', iso639: 'en', pattern: '(eng(lish)?)'},
-    {value: 'spanish',    emoji: '🇪🇸', iso639: 'es', pattern: 'spa(nish)?'},
+    // "Castellano" is a common Spain-Spanish audio tag that doesn't contain
+    // "spa"/"spanish" at all. Deliberately excludes "latino" (LATAM Spanish
+    // audio), which the user does not want prioritized as Spanish.
+    {value: 'spanish',    emoji: '🇪🇸', iso639: 'es', pattern: 'spa(nish)?|castellano'},
     {value: 'french',     emoji: '🇫🇷', iso639: 'fr', pattern: 'fre(nch)?'},
     {value: 'dutch',      emoji: '🇳🇱', iso639: 'nl', pattern: 'dutch'},
     {value: 'italian',    emoji: '🇮🇹', iso639: 'it', pattern: 'ita(lian)?'},
