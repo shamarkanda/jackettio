@@ -212,18 +212,12 @@ async function getTorrents(userConfig, metaInfos, debridInstance){
     console.log(`${stremioId} : ${torrents.length} torrents filtered, get torrents infos ...`);
     startDate = new Date();
 
-    // Download torrent infos: sequential per indexer, parallel across indexers.
-    // Some indexers (e.g. Wolfmax4K) share session/cookie state in Jackett across
-    // concurrent downloads (via enlacito.com), returning wrong torrents when run
-    // in parallel. Sequential per indexer avoids this; parallel across indexers
-    // keeps total time close to the slowest single indexer group.
-    const indexerGroups = {};
-    torrents.forEach(torrent => {
-      const key = torrent.indexerId || 'unknown';
-      if(!indexerGroups[key]) indexerGroups[key] = [];
-      indexerGroups[key].push(torrent);
-    });
-
+    // Download torrent infos in parallel. A past Wolfmax4K session-collision issue
+    // (concurrent requests sharing Jackett-side session/cookie state and returning
+    // wrong torrents) motivated fetching sequentially per indexer, but repeated
+    // stress-testing (fresh, never-cached links, up to 9 concurrent requests across
+    // indexers including Wolfmax4K) found no reproducible cross-contamination, so
+    // this restriction was dropped.
     const getTorrentInfoSafe = async (torrent) => {
       try {
         torrent.infos = await promiseTimeout(torrentInfos.get(torrent), Math.min(60, indexerTimeoutSec)*1000);
@@ -235,14 +229,7 @@ async function getTorrents(userConfig, metaInfos, debridInstance){
       }
     };
 
-    const groupResults = await Promise.all(Object.values(indexerGroups).map(async group => {
-      const results = [];
-      for(const torrent of group){
-        results.push(await getTorrentInfoSafe(torrent));
-      }
-      return results;
-    }));
-    torrents = groupResults.flat();
+    torrents = await Promise.all(torrents.map(getTorrentInfoSafe));
     torrents = torrents.filter(torrent => torrent && torrent.infos)
       .filter((torrent, index, items) => items.findIndex(t => t.infos.infoHash == torrent.infos.infoHash) === index)
       .slice(0, maxTorrents);
