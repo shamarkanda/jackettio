@@ -106,7 +106,11 @@ export async function searchEpisodeTorrents({indexer, name, originalName, year, 
       // Native tvsearch with season/ep params — lets Jackett handle filtering per indexer
       {t: 'tvsearch', q: name, season: season, ep: episode},
       // Fallback: Spanish naming format (1x05) for indexers with poor tvsearch support
-      {t: 'search', cat: CATEGORY.SERIES, q: `${name} ${season}x${numberPad(episode)}`},
+      // The Torznab spec ties season/ep to t=tvsearch, but Jackett's TorznabRequest.ToTorznabQuery
+      // parses season/ep unconditionally into query.Season/query.Episode regardless of `t`.
+      // Indexers that filter on query.Season (e.g. GranTorrent) need these here too, or they
+      // return every season for this free-text query. Harmless for indexers that ignore them.
+      {t: 'search', cat: CATEGORY.SERIES, q: `${name} ${season}x${numberPad(episode)}`, season: season, ep: episode},
       // Fallback: original name tvsearch for international indexers
       ...(originalName && originalName !== name ? [{t: 'tvsearch', q: originalName, season: season, ep: episode}] : [])
     ];
